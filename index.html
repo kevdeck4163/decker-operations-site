@@ -225,9 +225,34 @@
 
   .gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
   @media(max-width:820px){.gallery-grid{grid-template-columns:repeat(2,1fr);}}
-  .gallery-grid a{display:block;border-radius:5px;overflow:hidden;aspect-ratio:4/3;background:var(--paper-2);}
+  .gallery-grid a{display:block;border-radius:5px;overflow:hidden;aspect-ratio:4/3;background:var(--paper-2);cursor:zoom-in;}
   .gallery-grid img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease;}
   .gallery-grid a:hover img{transform:scale(1.06);}
+
+  .lightbox{
+    position:fixed;inset:0;z-index:100;background:rgba(16,14,10,.92);
+    display:none;align-items:center;justify-content:center;padding:28px;
+  }
+  .lightbox.open{display:flex;}
+  .lightbox img{
+    max-width:100%;max-height:100%;width:auto;height:auto;
+    object-fit:contain;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,.5);
+  }
+  .lightbox-close{
+    position:absolute;top:18px;right:22px;width:42px;height:42px;border-radius:50%;
+    background:rgba(255,255,255,.12);border:none;color:#fff8f0;font-size:22px;line-height:1;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  .lightbox-close:hover{background:rgba(255,255,255,.22);}
+  .lightbox-nav{
+    position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;
+    background:rgba(255,255,255,.12);border:none;color:#fff8f0;font-size:22px;line-height:1;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  .lightbox-nav:hover{background:rgba(255,255,255,.22);}
+  .lightbox-prev{left:18px;}
+  .lightbox-next{right:18px;}
+  @media(max-width:640px){.lightbox-nav{width:38px;height:38px;font-size:18px;}.lightbox-prev{left:8px;}.lightbox-next{right:8px;}}
 
   .area{background:var(--paper-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
   .area-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:40px;align-items:center;}
@@ -391,15 +416,15 @@
         <p class="eyebrow">Recent Work</p>
         <h2>From overgrown to graded.</h2>
       </div>
-      <div class="gallery-grid">
-        <a href="images/lot-before.jpg"><img src="images/lot-before.jpg" alt="Overgrown vacant lot before land clearing"></a>
-        <a href="images/skid-steer-clearing.jpg"><img src="images/skid-steer-clearing.jpg" alt="John Deere skid steer clearing brush and trees"></a>
-        <a href="images/skid-steer-path.jpg"><img src="images/skid-steer-path.jpg" alt="John Deere 325G clearing a wooded path"></a>
-        <a href="images/lot-cleared.jpg"><img src="images/lot-cleared.jpg" alt="Lot cleared and graded, ready for construction"></a>
-        <a href="images/grading-1.jpg"><img src="images/grading-1.jpg" alt="Freshly graded dirt lot"></a>
-        <a href="images/grading-2.jpg"><img src="images/grading-2.jpg" alt="Graded lot with visible tire tracks"></a>
-        <a href="images/site-prep-1.jpg"><img src="images/site-prep-1.jpg" alt="Block wall foundation site prep"></a>
-        <a href="images/site-prep-2.jpg"><img src="images/site-prep-2.jpg" alt="Block wall construction with graded surrounding dirt"></a>
+      <div class="gallery-grid" id="galleryGrid">
+        <a href="images/lot-before.jpg" data-lightbox><img src="images/lot-before.jpg" alt="Overgrown vacant lot before land clearing" loading="lazy" decoding="async"></a>
+        <a href="images/skid-steer-clearing.jpg" data-lightbox><img src="images/skid-steer-clearing.jpg" alt="John Deere skid steer clearing brush and trees" loading="lazy" decoding="async"></a>
+        <a href="images/skid-steer-path.jpg" data-lightbox><img src="images/skid-steer-path.jpg" alt="John Deere 325G clearing a wooded path" loading="lazy" decoding="async"></a>
+        <a href="images/lot-cleared.jpg" data-lightbox><img src="images/lot-cleared.jpg" alt="Lot cleared and graded, ready for construction" loading="lazy" decoding="async"></a>
+        <a href="images/grading-1.jpg" data-lightbox><img src="images/grading-1.jpg" alt="Freshly graded dirt lot" loading="lazy" decoding="async"></a>
+        <a href="images/grading-2.jpg" data-lightbox><img src="images/grading-2.jpg" alt="Graded lot with visible tire tracks" loading="lazy" decoding="async"></a>
+        <a href="images/site-prep-1.jpg" data-lightbox><img src="images/site-prep-1.jpg" alt="Block wall foundation site prep" loading="lazy" decoding="async"></a>
+        <a href="images/site-prep-2.jpg" data-lightbox><img src="images/site-prep-2.jpg" alt="Block wall construction with graded surrounding dirt" loading="lazy" decoding="async"></a>
       </div>
     </div>
   </section>
@@ -448,6 +473,13 @@
   </section>
 </main>
 
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true">
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times;</button>
+  <button class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Previous photo">&#8249;</button>
+  <img id="lightboxImg" src="" alt="">
+  <button class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Next photo">&#8250;</button>
+</div>
+
 <footer class="wrap">
   <span>&copy; <span id="yr"></span> Decker Operations LLC &middot; Tampa, FL</span>
   <span>(813) 683-5127 &middot; deckeroperations@gmail.com</span>
@@ -455,6 +487,55 @@
 
 <script>
   try{ document.getElementById('yr').textContent = new Date().getFullYear(); }catch(e){}
+
+  (function(){
+    try{
+      var links = Array.prototype.slice.call(document.querySelectorAll('#galleryGrid a[data-lightbox]'));
+      if(!links.length) return;
+      var box = document.getElementById('lightbox');
+      var img = document.getElementById('lightboxImg');
+      var closeBtn = document.getElementById('lightboxClose');
+      var prevBtn = document.getElementById('lightboxPrev');
+      var nextBtn = document.getElementById('lightboxNext');
+      var idx = 0;
+
+      function show(i){
+        idx = (i + links.length) % links.length;
+        var link = links[idx];
+        img.src = link.getAttribute('href');
+        img.alt = link.querySelector('img') ? link.querySelector('img').alt : '';
+      }
+      function open(i){
+        show(i);
+        box.classList.add('open');
+        box.setAttribute('aria-hidden','false');
+        document.body.style.overflow = 'hidden';
+      }
+      function close(){
+        box.classList.remove('open');
+        box.setAttribute('aria-hidden','true');
+        document.body.style.overflow = '';
+        img.src = '';
+      }
+
+      links.forEach(function(link, i){
+        link.addEventListener('click', function(e){
+          e.preventDefault();
+          open(i);
+        });
+      });
+      closeBtn.addEventListener('click', close);
+      prevBtn.addEventListener('click', function(){ show(idx - 1); });
+      nextBtn.addEventListener('click', function(){ show(idx + 1); });
+      box.addEventListener('click', function(e){ if(e.target === box) close(); });
+      document.addEventListener('keydown', function(e){
+        if(!box.classList.contains('open')) return;
+        if(e.key === 'Escape') close();
+        else if(e.key === 'ArrowLeft') show(idx - 1);
+        else if(e.key === 'ArrowRight') show(idx + 1);
+      });
+    }catch(e){}
+  })();
 </script>
 
 </body></html>
